@@ -1,3 +1,4 @@
+// src/components/CompanyCard.tsx
 import React, { useState } from 'react';
 import { Company, User } from '../types';
 import { Building2, Calendar, Phone, Mail, MapPin, User as UserIcon, Edit2, Check, X } from 'lucide-react';
@@ -6,7 +7,7 @@ interface CompanyCardProps {
   company: Company;
   users: User[];
   currentUser: User;
-  onUpdate: (id: string, updates: Partial<Company>) => void;
+  onUpdate: (id: number, updates: Partial<Company>) => void; // Changed id to number
 }
 
 export const CompanyCard: React.FC<CompanyCardProps> = ({
@@ -17,42 +18,52 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
-    status: company.status,
-    escalatedTo: company.escalatedTo || '',
+    status: company.status.toUpperCase() as Company['status'], 
+    escalatedTo: company.escalatedTo || (null as number | null), 
     meetingDate: company.meetingDate,
     notes: company.notes || '',
   });
 
+  // Ensure assignedTo and escalatedTo are numbers for comparison
   const assignedUser = users.find(u => u.id === company.assignedTo);
-  const canEdit = company.assignedTo === currentUser.id;
+  const escalatedUser = users.find(u => u.id === company.escalatedTo); // Added for display
+  const canEdit =
+  company.assignedTo === currentUser.id || company.escalatedTo === currentUser.id;
+
 
   const handleSave = () => {
-    onUpdate(company.id, editForm);
+    // Ensure escalatedTo is null if not escalated
+    const updatesToSend: Partial<Company> = {
+      ...editForm,
+      escalatedTo: editForm.status !== 'ESCALATED' ? null : editForm.escalatedTo,
+    };
+    onUpdate(company.id, updatesToSend); // company.id is already a number
     setIsEditing(false);
   };
 
   const handleCancel = () => {
     setEditForm({
       status: company.status,
-      escalatedTo: company.escalatedTo || '',
+      escalatedTo: company.escalatedTo || null, // Reset to original or null
       meetingDate: company.meetingDate,
       notes: company.notes || '',
     });
     setIsEditing(false);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'closed':
-        return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'escalated':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'CLOSED':
+      return 'bg-green-100 text-green-800';
+    case 'PENDING':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'ESCALATED':
+      return 'bg-red-100 text-red-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
+
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
@@ -113,21 +124,28 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
               <select
                 value={editForm.status}
-                onChange={(e) => setEditForm({ ...editForm, status: e.target.value as any })}
+                onChange={(e) => {
+                  const newStatus = e.target.value as Company['status'];
+                  setEditForm({
+                    ...editForm,
+                    status: newStatus,
+                    escalatedTo: newStatus !== 'ESCALATED' ? null : editForm.escalatedTo // Reset if not escalated
+                  });
+                }}
                 className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm"
               >
-                <option value="pending">Pending</option>
-                <option value="closed">Closed</option>
-                <option value="escalated">Escalated</option>
+                <option value="PENDING">Pending</option>
+                <option value="CLOSED">Closed</option>
+                <option value="ESCALATED">Escalated</option>
               </select>
             </div>
 
-            {editForm.status === 'escalated' && (
+            {editForm.status === 'ESCALATED' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Escalate to</label>
                 <select
-                  value={editForm.escalatedTo}
-                  onChange={(e) => setEditForm({ ...editForm, escalatedTo: e.target.value })}
+                  value={editForm.escalatedTo || ''} // Handle null for select value
+                  onChange={(e) => setEditForm({ ...editForm, escalatedTo: Number(e.target.value) || null })} // Convert to Number, allow null
                   className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm"
                 >
                   <option value="">Select user...</option>
@@ -184,7 +202,7 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
             
             {company.escalatedTo && (
               <span className="text-xs text-gray-600">
-                Escalated to: {users.find(u => u.id === company.escalatedTo)?.name}
+                Escalated to: {escalatedUser?.name}
               </span>
             )}
           </div>

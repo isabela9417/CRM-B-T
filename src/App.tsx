@@ -1,51 +1,88 @@
-import React, { useState } from 'react';
-import { User, Company } from './types';
-import { USERS } from './data/users';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { User } from './types';
 import { LoginForm } from './components/LoginForm';
 import { Dashboard } from './components/Dashboard';
+import { authApi } from './api'; 
+import { jwtDecode } from 'jwt-decode';
 
-function App() {
+function AppContent() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const navigate = useNavigate();
+
+ useEffect(() => {
+  const token = localStorage.getItem('authToken');
+  console.log("Token:", token);
+
+  if (!token) {
+    console.log("No token found. Logging out.");
+    handleLogout();
+    return;
+  }
+
+  try {
+    const decoded: any = jwtDecode(token);
+
+    const user: User = {
+      id: decoded.id,
+      firstname: decoded.firstname,
+      surname: decoded.surname,
+      email: decoded.email,
+      role: decoded.role,
+      contactNumber: '',
+      name: ''
+    };
+
+    console.log(`user id ${user.id}`);
+    console.log(`user name ${user.firstname}`);
+
+    setCurrentUser(user); // <-- THIS is what was missing
+
+  } catch (e) {
+    console.log("Invalid token. Logging out.");
+    handleLogout();
+  }
+}, []);
+
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
+    navigate('/dashboard'); 
   };
 
   const handleLogout = () => {
-    setCurrentUser(null);
+    authApi.logout(); 
+    setCurrentUser(null); 
+    navigate('/login'); 
   };
-
-  const handleAddCompany = (companyData: Omit<Company, 'id' | 'createdAt'>) => {
-    const newCompany: Company = {
-      ...companyData,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-    };
-    setCompanies(prev => [...prev, newCompany]);
-  };
-
-  const handleUpdateCompany = (id: string, updates: Partial<Company>) => {
-    setCompanies(prev => 
-      prev.map(company => 
-        company.id === id ? { ...company, ...updates } : company
-      )
-    );
-  };
-
-  if (!currentUser) {
-    return <LoginForm onLogin={handleLogin} />;
-  }
 
   return (
-    <Dashboard
-      currentUser={currentUser}
-      companies={companies}
-      users={USERS}
-      onAddCompany={handleAddCompany}
-      onUpdateCompany={handleUpdateCompany}
-      onLogout={handleLogout}
-    />
+    <Routes>
+      <Route path="/login" element={
+        currentUser ? <Navigate to="/dashboard" replace /> : <LoginForm onLogin={handleLogin} />
+      } />
+
+      <Route path="/dashboard" element={
+        currentUser ? (
+          <Dashboard
+            currentUser={currentUser}
+            onLogout={handleLogout}
+          />
+        ) : (
+          <Navigate to="/login" replace /> 
+        )
+      } />
+
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
   );
 }
 

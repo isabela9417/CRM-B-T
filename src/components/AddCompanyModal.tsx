@@ -1,3 +1,4 @@
+// src/components/AddCompanyModal.tsx
 import React, { useState } from 'react';
 import { Company, User } from '../types';
 import { X, Building2, AlertCircle } from 'lucide-react';
@@ -5,7 +6,7 @@ import { X, Building2, AlertCircle } from 'lucide-react';
 interface AddCompanyModalProps {
   users: User[];
   currentUser: User;
-  assignedCompanies: Company[];
+  assignedCompanies: Company[]; // Still useful for initial client-side check, but backend is authoritative
   onClose: () => void;
   onSubmit: (company: Omit<Company, 'id' | 'createdAt'>) => void;
 }
@@ -25,12 +26,13 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
       address: '',
       contactPerson: '',
     },
-    assignedTo: currentUser.id,
+    assignedTo: currentUser.id, // Ensure this is a number
     contactDate: new Date().toISOString().split('T')[0],
     meetingDate: '',
-    status: 'pending' as const,
-    escalatedTo: '',
+    status: 'PENDING' as Company['status'], 
+    escalatedTo: null as number | null, // Initialize as null or number
     notes: '',
+    assignedBy: currentUser.id, // Add assignedBy here, as it's part of the new Company
   });
 
   const [errors, setErrors] = useState<string[]>([]);
@@ -42,7 +44,8 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
       newErrors.push('Company name is required');
     }
 
-    // Check if company already exists
+    // Client-side check for duplicate company name
+    // Backend will be authoritative for this, but this provides quicker feedback
     const existingCompany = assignedCompanies.find(
       c => c.name.toLowerCase() === formData.name.toLowerCase().trim()
     );
@@ -69,7 +72,7 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
       newErrors.push('Meeting date is required');
     }
 
-    if (formData.status === 'escalated' && !formData.escalatedTo) {
+    if (formData.status === 'ESCALATED' && !formData.escalatedTo) {
       newErrors.push('Please select who to escalate to');
     }
 
@@ -84,12 +87,14 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
       return;
     }
 
-    onSubmit({
+    // Ensure escalatedTo is null if not escalated
+    const submissionData = {
       ...formData,
-      assignedBy: currentUser.id,
-    });
+      escalatedTo: formData.status !== 'ESCALATED' ? null : formData.escalatedTo,
+    };
     
-    onClose();
+    onSubmit(submissionData); // Submit the data to the Dashboard's handler
+    // onClose is called by Dashboard after successful submission
   };
 
   return (
@@ -209,7 +214,7 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
               </label>
               <select
                 value={formData.assignedTo}
-                onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, assignedTo: Number(e.target.value) })} // Convert to Number
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
               >
                 {users.map(user => (
@@ -250,7 +255,14 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
               </label>
               <select
                 value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                onChange={(e) => {
+                  const newStatus = e.target.value as Company['status'];
+                  setFormData({
+                    ...formData,
+                    status: newStatus,
+                    escalatedTo: newStatus !== 'ESCALATED' ? null : formData.escalatedTo // Reset if not escalated
+                  });
+                }}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
               >
                 <option value="pending">Pending</option>
@@ -259,14 +271,14 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
               </select>
             </div>
 
-            {formData.status === 'escalated' && (
+            {formData.status === 'ESCALATED' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Escalate To *
                 </label>
                 <select
-                  value={formData.escalatedTo}
-                  onChange={(e) => setFormData({ ...formData, escalatedTo: e.target.value })}
+                  value={formData.escalatedTo || ''} // Handle null for select value
+                  onChange={(e) => setFormData({ ...formData, escalatedTo: Number(e.target.value) || null })} // Convert to Number, allow null
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 >
                   <option value="">Select user...</option>
