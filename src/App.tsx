@@ -33,9 +33,6 @@ function AppContent() {
       name: ''
     };
 
-    console.log(`user id ${user.id}`);
-    console.log(`user name ${user.firstname}`);
-
     setCurrentUser(user); // <-- THIS is what was missing
 
   } catch (e) {
