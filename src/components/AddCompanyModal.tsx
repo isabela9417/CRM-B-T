@@ -54,24 +54,6 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
       newErrors.push(`Company "${formData.name}" is already assigned to ${assignedUser?.name}`);
     }
 
-    if (!formData.contactDetails.contactPerson.trim()) {
-      newErrors.push('Contact person is required');
-    }
-
-    if (!formData.contactDetails.email.trim()) {
-      newErrors.push('Email is required');
-    } else if (!/\S+@\S+\.\S+/.test(formData.contactDetails.email)) {
-      newErrors.push('Please enter a valid email address');
-    }
-
-    if (!formData.contactDetails.phone.trim()) {
-      newErrors.push('Phone number is required');
-    }
-
-    if (!formData.meetingDate) {
-      newErrors.push('Meeting date is required');
-    }
-
     if (formData.status === 'ESCALATED' && !formData.escalatedTo) {
       newErrors.push('Please select who to escalate to');
     }
@@ -80,22 +62,35 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
     return newErrors.length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Ensure escalatedTo is null if not escalated
-    const submissionData = {
-      ...formData,
-      escalatedTo: formData.status !== 'ESCALATED' ? null : formData.escalatedTo,
-    };
-    
-    onSubmit(submissionData); // Submit the data to the Dashboard's handler
-    // onClose is called by Dashboard after successful submission
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (isSubmitting) return; // Stop if already submitting
+
+  if (!validateForm()) return;
+
+  setIsSubmitting(true);
+
+  const submissionData = {
+    ...formData,
+    escalatedTo: formData.status !== 'ESCALATED' ? null : formData.escalatedTo,
   };
+
+  try {
+    // Await in case onSubmit is async (API call)
+    await onSubmit(submissionData);
+
+    // If modal closes after success, no need to reset isSubmitting here.
+    // But if you keep it open after submit:
+    // setIsSubmitting(false);
+  } catch (error) {
+    console.error("Failed to submit:", error);
+    setIsSubmitting(false); // Re-enable button on error
+  }
+};
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -311,12 +306,18 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Add Company
-            </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={`px-6 py-2 rounded-lg transition-colors ${
+              isSubmitting
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : 'bg-red-600 text-white hover:bg-red-700'
+            }`}
+          >
+            {isSubmitting ? 'Adding...' : 'Add Company'}
+          </button>
+
           </div>
         </form>
       </div>
