@@ -1,118 +1,179 @@
 import React, { useState } from 'react';
 import { User } from '../types';
-import { LogIn, Users, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { authApi } from '../api'; 
+import { Building2, LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
 
 interface LoginFormProps {
   onLogin: (user: User) => void;
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Mock users for demo
+  const mockUsers: User[] = [
+    {
+      id: 1,
+      name: 'John Doe',
+      firstname: 'John',
+      surname: 'Doe',
+      email: 'john.doe@company.com',
+      role: 'ADMIN',
+      createdAt: '2024-01-01T00:00:00Z'
+    },
+    {
+      id: 2,
+      name: 'Jane Smith',
+      firstname: 'Jane',
+      surname: 'Smith',
+      email: 'jane.smith@company.com',
+      role: 'USER',
+      createdAt: '2024-01-01T00:00:00Z'
+    }
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
+    setLoading(true);
 
-    try {
-      // Call your backend login API
-      const loggedInUser = await authApi.login({ email, password });
-      onLogin(loggedInUser); // Pass the full user object received from backend (or constructed from response)
-    } catch (err: any) {
-      console.error('Login error:', err);
-      // Handle different error responses from backend
-      if (err.response && err.response.status === 401) { // Unauthorized
-        setError('Invalid email or password. Please try again.');
-      } else {
-        setError('Login failed. Please try again later.');
-      }
-    } finally {
-      setIsLoading(false);
+    // Mock authentication
+    const user = mockUsers.find(u => u.email === formData.email);
+    
+    if (!user) {
+      setError('Invalid email or password');
+      setLoading(false);
+      return;
     }
+
+    // Simulate API call delay
+    setTimeout(() => {
+      onLogin(user);
+      setLoading(false);
+    }, 1000);
   };
 
-  const handleDemoLogin = (demoEmail: string, demoPassword: string) => { // Updated to use email/password
-    setEmail(demoEmail);
-    setPassword(demoPassword);
+  const handleDemoLogin = (user: User) => {
     setError('');
-    // Optionally trigger a submit here if you want it to log in immediately
+    setLoading(true);
+    setTimeout(() => {
+      onLogin(user);
+      setLoading(false);
+    }, 500);
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4">
-      <div className="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="mx-auto w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mb-4">
-            <Users className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-black mb-2">CRM Access</h1>
-          <p className="text-gray-600">Enter your credentials to access the system</p>
-        </div>
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-            <p className="text-sm text-red-700">{error}</p>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2"> {/* Changed to email */}
-              Email
-            </label>
-            <input
-              type="email" // Changed type to email
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-black"
-              placeholder="Enter your email" // Changed placeholder
-              required
-            />
+    <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
+      <div className="bg-card rounded-lg shadow-xl w-full max-w-md border">
+        <div className="p-8">
+          <div className="text-center mb-8">
+            <div className="bg-crm-primary p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+              <Building2 className="w-8 h-8 text-crm-primary-foreground" />
+            </div>
+            <h1 className="text-2xl font-bold text-card-foreground mb-2">CRM System</h1>
+            <p className="text-muted-foreground">Sign in to manage your companies</p>
           </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Password
-            </label>
+          {error && (
+            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center space-x-2">
+              <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0" />
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-card-foreground mb-2">
+                Email Address
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="block w-full pl-10 pr-3 py-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground placeholder-muted-foreground"
+                  placeholder="Enter your email"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-card-foreground mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <input
+                  type="password"
+                  required
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="block w-full pl-10 pr-3 py-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground placeholder-muted-foreground"
+                  placeholder="Enter your password"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-crm-primary text-crm-primary-foreground py-3 px-4 rounded-lg hover:bg-crm-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-crm-primary-foreground"></div>
+                  <span>Signing in...</span>
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-4 h-4" />
+                  <span>Sign In</span>
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="mt-8">
             <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-black pr-12"
-                placeholder="Enter your password"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-card text-muted-foreground">Demo Accounts</span>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {mockUsers.map((user) => (
+                <button
+                  key={user.id}
+                  onClick={() => handleDemoLogin(user)}
+                  disabled={loading}
+                  className="w-full bg-secondary text-secondary-foreground py-2 px-4 rounded-lg hover:bg-secondary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-left"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium">{user.name}</div>
+                      <div className="text-xs text-muted-foreground">{user.email}</div>
+                    </div>
+                    <span className="text-xs bg-accent text-accent-foreground px-2 py-1 rounded">
+                      {user.role}
+                    </span>
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <LogIn className="w-5 h-5" />
-            <span>{isLoading ? 'Signing in...' : 'Sign In'}</span>
-          </button>
-        </form>
-
-        <div className="mt-6 text-center text-sm text-gray-500">
-          Authorized personnel only • Secure access required
         </div>
       </div>
     </div>

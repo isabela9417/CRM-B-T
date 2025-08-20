@@ -2,22 +2,26 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Company, User } from '../types';
 import { CompanyCard } from './CompanyCard';
 import { AddCompanyModal } from './AddCompanyModal';
-import { Plus, LogOut, Building2, Users as UsersIcon, AlertCircle } from 'lucide-react'; // Renamed Users to UsersIcon to avoid conflict with 'users' state
-import { companyApi, userApi, authApi } from '../api'; // Import your API services
+import { Plus, LogOut, Building2, Users as UsersIcon, AlertCircle, Search, X } from 'lucide-react';
+import { companyApi, userApi, authApi } from '../api';
 
 interface DashboardProps {
   currentUser: User;
   onLogout: () => void;
+  onOpenComments: (company: Company) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
   currentUser,
   onLogout,
+  onOpenComments,
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'mine' | 'pending' | 'closed'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [users, setUsers] = useState<User[]>([]); // State to hold all users
+  const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +37,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         fetchedCompanies = await companyApi.getAllCompanies({ status: 'PENDING' });
       } else if (filter === 'closed') {
         fetchedCompanies = await companyApi.getAllCompanies({ status: 'CLOSED' });
-      } else { // 'all'
+      } else {
         fetchedCompanies = await companyApi.getAllCompanies();
       }
       setCompanies(fetchedCompanies);
@@ -44,6 +48,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
       setLoading(false);
     }
   }, [filter, currentUser.id]);
+
+  // Function to filter companies based on search term
+  const filterCompanies = useCallback(() => {
+    if (!searchTerm.trim()) {
+      setFilteredCompanies(companies);
+      return;
+    }
+
+    const filtered = companies.filter(company => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        company.name.toLowerCase().includes(searchLower) ||
+        company.contactDetails.contactPerson.toLowerCase().includes(searchLower) ||
+        company.contactDetails.email.toLowerCase().includes(searchLower) ||
+        company.contactDetails.phone.includes(searchTerm) ||
+        (company.contactDetails.address && company.contactDetails.address.toLowerCase().includes(searchLower)) ||
+        (company.notes && company.notes.toLowerCase().includes(searchLower))
+      );
+    });
+    setFilteredCompanies(filtered);
+  }, [companies, searchTerm]);
 
   // Function to fetch all users from the backend
   const fetchUsers = useCallback(async () => {
@@ -58,7 +83,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // Initial data fetch on component mount
   useEffect(() => {
-    fetchUsers(); // Fetch users once on mount
+    fetchUsers();
   }, [fetchUsers]);
 
   // Fetch companies when filter changes or on initial mount
@@ -66,21 +91,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
     fetchCompanies();
   }, [fetchCompanies]);
 
+  // Filter companies when search term or companies change
+  useEffect(() => {
+    filterCompanies();
+  }, [filterCompanies]);
 
   const handleAddCompany = async (newCompanyData: Omit<Company, 'id' | 'createdAt'>) => {
     setError(null);
     try {
       await companyApi.addCompany(newCompanyData);
-      setShowAddModal(false); // Close modal on success
-      fetchCompanies(); // Re-fetch companies to update the list
+      setShowAddModal(false);
+      fetchCompanies();
     } catch (err: any) {
       console.error('Failed to add company:', err);
       if (err.response && err.response.status === 409) {
         setError('A company with this name already exists.');
       } else if (err.response && err.response.status === 404) {
         setError('Assigned user or escalated user not found.');
-      }
-      else {
+      } else {
         setError('Failed to add company. Please try again.');
       }
     }
@@ -90,7 +118,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setError(null);
     try {
       await companyApi.updateCompany(id, updates);
-      fetchCompanies(); // Re-fetch companies to update the list
+      fetchCompanies();
     } catch (err) {
       console.error('Failed to update company:', err);
       setError('Failed to update company. Please try again.');
@@ -98,8 +126,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const handleLogout = () => {
-    authApi.logout(); // Clear token
-    onLogout(); // Navigate to login page
+    authApi.logout();
+    onLogout();
+  };
+
+  const clearSearch = () => {
+    setSearchTerm('');
   };
 
   const stats = {
@@ -110,23 +142,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted/30">
       {/* Header */}
-      <header className="bg-black text-white shadow-lg">
+      <header className="bg-primary text-primary-foreground shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
-              <Building2 className="w-8 h-8 text-red-600" />
+              <Building2 className="w-8 h-8 text-crm-primary" />
               <h1 className="text-xl font-bold">CRM System</h1>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-sm">
-                <span className="text-gray-300">Welcome, </span>
-                <span className="font-medium">{currentUser.firstname} {currentUser.surname}</span> {/* Use firstname/surname */}
+                <span className="text-muted-foreground">Welcome, </span>
+                <span className="font-medium">{currentUser.firstname} {currentUser.surname}</span>
               </div>
               <button
                 onClick={handleLogout}
-                className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors"
+                className="flex items-center space-x-2 text-muted-foreground hover:text-primary-foreground transition-colors"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Logout</span>
@@ -139,33 +171,56 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* Stats */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="text-2xl font-bold text-black">{stats.total}</div>
-            <div className="text-sm text-gray-600">Total Companies</div>
+          <div className="bg-card p-6 rounded-lg shadow-md border">
+            <div className="text-2xl font-bold text-foreground">{stats.total}</div>
+            <div className="text-sm text-muted-foreground">Total Companies</div>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="text-2xl font-bold text-red-600">{stats.mine}</div>
-            <div className="text-sm text-gray-600">My Companies</div>
+          <div className="bg-card p-6 rounded-lg shadow-md border">
+            <div className="text-2xl font-bold text-crm-primary">{stats.mine}</div>
+            <div className="text-sm text-muted-foreground">My Companies</div>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-            <div className="text-sm text-gray-600">Pending Deals</div>
+          <div className="bg-card p-6 rounded-lg shadow-md border">
+            <div className="text-2xl font-bold text-status-pending">{stats.pending}</div>
+            <div className="text-sm text-muted-foreground">Pending Deals</div>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="text-2xl font-bold text-green-600">{stats.closed}</div>
-            <div className="text-sm text-gray-600">Closed Deals</div>
+          <div className="bg-card p-6 rounded-lg shadow-md border">
+            <div className="text-2xl font-bold text-status-closed">{stats.closed}</div>
+            <div className="text-sm text-muted-foreground">Closed Deals</div>
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
+        {/* Search and Controls */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 space-y-4 lg:space-y-0 lg:space-x-4">
+          {/* Search Bar */}
+          <div className="relative flex-1 max-w-md">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search companies, contacts, or details..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="block w-full pl-10 pr-10 py-2 border border-search-border rounded-lg focus:ring-2 focus:ring-search-focus focus:border-search-focus bg-search-background text-foreground placeholder-muted-foreground"
+            />
+            {searchTerm && (
+              <button
+                onClick={clearSearch}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              >
+                <X className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+              </button>
+            )}
+          </div>
+
+          {/* Filter Buttons */}
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setFilter('all')}
               className={`px-4 py-2 rounded-lg transition-colors ${
                 filter === 'all'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
+                  ? 'bg-crm-primary text-crm-primary-foreground'
+                  : 'bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground border'
               }`}
             >
               All Companies
@@ -174,8 +229,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
               onClick={() => setFilter('mine')}
               className={`px-4 py-2 rounded-lg transition-colors ${
                 filter === 'mine'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
+                  ? 'bg-crm-primary text-crm-primary-foreground'
+                  : 'bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground border'
               }`}
             >
               My Companies
@@ -184,8 +239,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
               onClick={() => setFilter('pending')}
               className={`px-4 py-2 rounded-lg transition-colors ${
                 filter === 'pending'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
+                  ? 'bg-crm-primary text-crm-primary-foreground'
+                  : 'bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground border'
               }`}
             >
               Pending
@@ -194,8 +249,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
               onClick={() => setFilter('closed')}
               className={`px-4 py-2 rounded-lg transition-colors ${
                 filter === 'closed'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
+                  ? 'bg-crm-primary text-crm-primary-foreground'
+                  : 'bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground border'
               }`}
             >
               Closed
@@ -204,43 +259,78 @@ export const Dashboard: React.FC<DashboardProps> = ({
           
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
+            className="bg-crm-primary text-crm-primary-foreground px-6 py-2 rounded-lg hover:bg-crm-primary-hover transition-colors flex items-center space-x-2"
           >
             <Plus className="w-5 h-5" />
             <span>Add Company</span>
           </button>
         </div>
 
+        {/* Search Results Info */}
+        {searchTerm && (
+          <div className="mb-6 p-3 bg-accent/50 border border-accent rounded-lg">
+            <p className="text-sm text-accent-foreground">
+              Found {filteredCompanies.length} companies matching "{searchTerm}"
+              {searchTerm && (
+                <button
+                  onClick={clearSearch}
+                  className="ml-2 text-crm-primary hover:underline"
+                >
+                  Clear search
+                </button>
+              )}
+            </p>
+          </div>
+        )}
+
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-            <p className="text-sm text-red-700">{error}</p>
+          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center space-x-2">
+            <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0" />
+            <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
 
         {loading && (
-          <div className="text-center py-12 text-gray-600">Loading companies...</div>
+          <div className="text-center py-12 text-muted-foreground">Loading companies...</div>
         )}
 
-        {!loading && companies.length === 0 && ( // Changed filteredCompanies to companies for initial check
+        {!loading && filteredCompanies.length === 0 && !searchTerm && (
           <div className="text-center py-12">
-            <UsersIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No companies found</h3>
-            <p className="text-gray-600">
+            <UsersIcon className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">No companies found</h3>
+            <p className="text-muted-foreground">
               {filter === 'all' ? 'Start by adding your first company.' : 'No companies match the selected filter.'}
             </p>
           </div>
         )}
 
-        {!loading && companies.length > 0 && ( // Changed filteredCompanies to companies
+        {!loading && filteredCompanies.length === 0 && searchTerm && (
+          <div className="text-center py-12">
+            <Search className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">No results found</h3>
+            <p className="text-muted-foreground">
+              Try adjusting your search terms or{' '}
+              <button onClick={clearSearch} className="text-crm-primary hover:underline">
+                clear the search
+              </button>{' '}
+              to see all companies.
+            </p>
+          </div>
+        )}
+
+        {!loading && filteredCompanies.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {companies.map(company => (
+            {filteredCompanies.map(company => (
               <CompanyCard
                 key={company.id}
                 company={company}
-                users={users} // Pass fetched users
+                users={users}
                 currentUser={currentUser}
                 onUpdate={handleUpdateCompany}
+                onAddComment={(companyId, content) => {
+                  // This can be expanded to actually add comments via API
+                  console.log('Adding comment to company', companyId, ':', content);
+                }}
               />
             ))}
           </div>
@@ -250,9 +340,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* Add Company Modal */}
       {showAddModal && (
         <AddCompanyModal
-          users={users} // Pass fetched users
+          users={users}
           currentUser={currentUser}
-          assignedCompanies={companies} // Still pass for client-side check before API call
+          assignedCompanies={companies}
           onClose={() => setShowAddModal(false)}
           onSubmit={handleAddCompany}
         />

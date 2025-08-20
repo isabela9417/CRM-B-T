@@ -1,4 +1,3 @@
-// src/components/AddCompanyModal.tsx
 import React, { useState } from 'react';
 import { Company, User } from '../types';
 import { X, Building2, AlertCircle } from 'lucide-react';
@@ -6,7 +5,7 @@ import { X, Building2, AlertCircle } from 'lucide-react';
 interface AddCompanyModalProps {
   users: User[];
   currentUser: User;
-  assignedCompanies: Company[]; // Still useful for initial client-side check, but backend is authoritative
+  assignedCompanies: Company[]; 
   onClose: () => void;
   onSubmit: (company: Omit<Company, 'id' | 'createdAt'>) => void;
 }
@@ -26,13 +25,13 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
       address: '',
       contactPerson: '',
     },
-    assignedTo: currentUser.id, // Ensure this is a number
+    assignedTo: currentUser.id,
     contactDate: new Date().toISOString().split('T')[0],
     meetingDate: '',
     status: 'PENDING' as Company['status'], 
-    escalatedTo: null as number | null, // Initialize as null or number
+    escalatedTo: null as number | null,
     notes: '',
-    assignedBy: currentUser.id, // Add assignedBy here, as it's part of the new Company
+    assignedBy: currentUser.id,
   });
 
   const [errors, setErrors] = useState<string[]>([]);
@@ -44,8 +43,6 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
       newErrors.push('Company name is required');
     }
 
-    // Client-side check for duplicate company name
-    // Backend will be authoritative for this, but this provides quicker feedback
     const existingCompany = assignedCompanies.find(
       c => c.name.toLowerCase() === formData.name.toLowerCase().trim()
     );
@@ -87,29 +84,27 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
       return;
     }
 
-    // Ensure escalatedTo is null if not escalated
     const submissionData = {
       ...formData,
       escalatedTo: formData.status !== 'ESCALATED' ? null : formData.escalatedTo,
     };
     
-    onSubmit(submissionData); // Submit the data to the Dashboard's handler
-    // onClose is called by Dashboard after successful submission
+    onSubmit(submissionData);
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-card rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border">
+        <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center space-x-3">
-            <div className="bg-red-600 p-2 rounded-lg">
-              <Building2 className="w-5 h-5 text-white" />
+            <div className="bg-crm-primary p-2 rounded-lg">
+              <Building2 className="w-5 h-5 text-crm-primary-foreground" />
             </div>
-            <h2 className="text-xl font-semibold text-black">Add New Company</h2>
+            <h2 className="text-xl font-semibold text-card-foreground">Add New Company</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-2 text-muted-foreground hover:text-card-foreground transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -117,12 +112,12 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
 
         <form onSubmit={handleSubmit} className="p-6">
           {errors.length > 0 && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
               <div className="flex items-center space-x-2 mb-2">
-                <AlertCircle className="w-5 h-5 text-red-600" />
-                <h3 className="text-sm font-medium text-red-800">Please fix the following errors:</h3>
+                <AlertCircle className="w-5 h-5 text-destructive" />
+                <h3 className="text-sm font-medium text-destructive">Please fix the following errors:</h3>
               </div>
-              <ul className="text-sm text-red-700 space-y-1">
+              <ul className="text-sm text-destructive space-y-1">
                 {errors.map((error, index) => (
                   <li key={index}>• {error}</li>
                 ))}
@@ -132,20 +127,20 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-card-foreground mb-2">
                 Company Name *
               </label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
                 placeholder="Enter company name"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-card-foreground mb-2">
                 Contact Person *
               </label>
               <input
@@ -155,13 +150,13 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
                   ...formData,
                   contactDetails: { ...formData.contactDetails, contactPerson: e.target.value }
                 })}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
                 placeholder="Enter contact person name"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-card-foreground mb-2">
                 Email *
               </label>
               <input
@@ -171,13 +166,13 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
                   ...formData,
                   contactDetails: { ...formData.contactDetails, email: e.target.value }
                 })}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
                 placeholder="Enter email address"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-card-foreground mb-2">
                 Phone Number *
               </label>
               <input
@@ -187,13 +182,13 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
                   ...formData,
                   contactDetails: { ...formData.contactDetails, phone: e.target.value }
                 })}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
                 placeholder="Enter phone number"
               />
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-card-foreground mb-2">
                 Address
               </label>
               <input
@@ -203,19 +198,19 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
                   ...formData,
                   contactDetails: { ...formData.contactDetails, address: e.target.value }
                 })}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
                 placeholder="Enter company address"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-card-foreground mb-2">
                 Assigned To
               </label>
               <select
                 value={formData.assignedTo}
-                onChange={(e) => setFormData({ ...formData, assignedTo: Number(e.target.value) })} // Convert to Number
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                onChange={(e) => setFormData({ ...formData, assignedTo: Number(e.target.value) })}
+                className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
               >
                 {users.map(user => (
                   <option key={user.id} value={user.id}>
@@ -226,31 +221,31 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-card-foreground mb-2">
                 Contact Date
               </label>
               <input
                 type="date"
                 value={formData.contactDate}
                 onChange={(e) => setFormData({ ...formData, contactDate: e.target.value })}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-card-foreground mb-2">
                 Meeting Date *
               </label>
               <input
                 type="date"
                 value={formData.meetingDate}
                 onChange={(e) => setFormData({ ...formData, meetingDate: e.target.value })}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-card-foreground mb-2">
                 Status
               </label>
               <select
@@ -260,26 +255,26 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
                   setFormData({
                     ...formData,
                     status: newStatus,
-                    escalatedTo: newStatus !== 'ESCALATED' ? null : formData.escalatedTo // Reset if not escalated
+                    escalatedTo: newStatus !== 'ESCALATED' ? null : formData.escalatedTo
                   });
                 }}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
               >
-                <option value="pending">Pending</option>
-                <option value="closed">Closed</option>
-                <option value="escalated">Escalated</option>
+                <option value="PENDING">Pending</option>
+                <option value="CLOSED">Closed</option>
+                <option value="ESCALATED">Escalated</option>
               </select>
             </div>
 
             {formData.status === 'ESCALATED' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-card-foreground mb-2">
                   Escalate To *
                 </label>
                 <select
-                  value={formData.escalatedTo || ''} // Handle null for select value
-                  onChange={(e) => setFormData({ ...formData, escalatedTo: Number(e.target.value) || null })} // Convert to Number, allow null
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  value={formData.escalatedTo || ''}
+                  onChange={(e) => setFormData({ ...formData, escalatedTo: Number(e.target.value) || null })}
+                  className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
                 >
                   <option value="">Select user...</option>
                   {users.filter(u => u.id !== currentUser.id).map(user => (
@@ -290,14 +285,14 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
             )}
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-card-foreground mb-2">
                 Notes
               </label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 placeholder="Add any additional notes about the company or meeting..."
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                className="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
                 rows={3}
               />
             </div>
@@ -307,13 +302,13 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+              className="px-6 py-2 text-secondary-foreground bg-secondary rounded-lg hover:bg-secondary/80 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              className="px-6 py-2 bg-crm-primary text-crm-primary-foreground rounded-lg hover:bg-crm-primary-hover transition-colors"
             >
               Add Company
             </button>

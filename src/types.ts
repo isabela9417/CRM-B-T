@@ -15,6 +15,15 @@ export interface ContactDetails {
   contactPerson: string;
 }
 
+export interface Comment {
+  id: number;
+  companyId: number;
+  userId: number;
+  content: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface Company {
   id: number; 
   name: string;
@@ -27,4 +36,5 @@ export interface Company {
   escalatedTo?: number | null; 
   notes?: string;
   createdAt: string;
+  comments?: Comment[];
 }
