@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import { Building2, LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
+import logo from "../../logo.png";
 
 interface LoginFormProps {
   onLogin: (user: User) => void;
@@ -14,7 +15,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Mock users for demo
+  // Mock users for demo (no role now)
   const mockUsers: User[] = [
     {
       id: 1,
@@ -22,7 +23,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       firstname: 'John',
       surname: 'Doe',
       email: 'john.doe@company.com',
-      role: 'ADMIN',
       createdAt: '2024-01-01T00:00:00Z'
     },
     {
@@ -31,7 +31,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       firstname: 'Jane',
       surname: 'Smith',
       email: 'jane.smith@company.com',
-      role: 'USER',
       createdAt: '2024-01-01T00:00:00Z'
     }
   ];
@@ -71,10 +70,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       <div className="bg-card rounded-lg shadow-xl w-full max-w-md border">
         <div className="p-8">
           <div className="text-center mb-8">
-            <div className="bg-crm-primary p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-              <Building2 className="w-8 h-8 text-crm-primary-foreground" />
-            </div>
-            <h1 className="text-2xl font-bold text-card-foreground mb-2">CRM System</h1>
+           <img src={logo} alt="CRM Logo" className="h-12 w-auto mx-auto mb-4" />
             <p className="text-muted-foreground">Sign in to manage your companies</p>
           </div>
 
@@ -148,12 +144,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-border" />
               </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-card text-muted-foreground">Demo Accounts</span>
-              </div>
             </div>
 
-            <div className="mt-6 space-y-3">
+            {/* <div className="mt-6 space-y-3">
               {mockUsers.map((user) => (
                 <button
                   key={user.id}
@@ -166,13 +159,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
                       <div className="text-sm font-medium">{user.name}</div>
                       <div className="text-xs text-muted-foreground">{user.email}</div>
                     </div>
-                    <span className="text-xs bg-accent text-accent-foreground px-2 py-1 rounded">
-                      {user.role}
-                    </span>
                   </div>
                 </button>
               ))}
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

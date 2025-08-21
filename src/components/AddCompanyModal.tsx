@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Company, User } from '../types';
 import { X, Building2, AlertCircle } from 'lucide-react';
+import logo from "../../logo.png";
 
 interface AddCompanyModalProps {
   users: User[];
@@ -39,38 +40,9 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
   const validateForm = () => {
     const newErrors: string[] = [];
 
-    if (!formData.name.trim()) {
-      newErrors.push('Company name is required');
-    }
-
-    const existingCompany = assignedCompanies.find(
-      c => c.name.toLowerCase() === formData.name.toLowerCase().trim()
-    );
-    if (existingCompany) {
-      const assignedUser = users.find(u => u.id === existingCompany.assignedTo);
-      newErrors.push(`Company "${formData.name}" is already assigned to ${assignedUser?.name}`);
-    }
-
-    if (!formData.contactDetails.contactPerson.trim()) {
-      newErrors.push('Contact person is required');
-    }
-
-    if (!formData.contactDetails.email.trim()) {
-      newErrors.push('Email is required');
-    } else if (!/\S+@\S+\.\S+/.test(formData.contactDetails.email)) {
+    // Only validate email if user typed something
+    if (formData.contactDetails.email.trim() && !/\S+@\S+\.\S+/.test(formData.contactDetails.email)) {
       newErrors.push('Please enter a valid email address');
-    }
-
-    if (!formData.contactDetails.phone.trim()) {
-      newErrors.push('Phone number is required');
-    }
-
-    if (!formData.meetingDate) {
-      newErrors.push('Meeting date is required');
-    }
-
-    if (formData.status === 'ESCALATED' && !formData.escalatedTo) {
-      newErrors.push('Please select who to escalate to');
     }
 
     setErrors(newErrors);
@@ -97,10 +69,7 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
       <div className="bg-card rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border">
         <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center space-x-3">
-            <div className="bg-crm-primary p-2 rounded-lg">
-              <Building2 className="w-5 h-5 text-crm-primary-foreground" />
-            </div>
-            <h2 className="text-xl font-semibold text-card-foreground">Add New Company</h2>
+            <img src={logo} alt="CRM Logo" className="h-12 w-auto mx-auto mb-4" />
           </div>
           <button
             onClick={onClose}
@@ -128,7 +97,7 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-card-foreground mb-2">
-                Company Name *
+                Company Name
               </label>
               <input
                 type="text"
@@ -141,7 +110,7 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
 
             <div>
               <label className="block text-sm font-medium text-card-foreground mb-2">
-                Contact Person *
+                Contact Person
               </label>
               <input
                 type="text"
@@ -157,7 +126,7 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
 
             <div>
               <label className="block text-sm font-medium text-card-foreground mb-2">
-                Email *
+                Email
               </label>
               <input
                 type="email"
@@ -173,7 +142,7 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
 
             <div>
               <label className="block text-sm font-medium text-card-foreground mb-2">
-                Phone Number *
+                Phone Number
               </label>
               <input
                 type="tel"
@@ -234,7 +203,7 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
 
             <div>
               <label className="block text-sm font-medium text-card-foreground mb-2">
-                Meeting Date *
+                Meeting Date
               </label>
               <input
                 type="date"
@@ -269,7 +238,7 @@ export const AddCompanyModal: React.FC<AddCompanyModalProps> = ({
             {formData.status === 'ESCALATED' && (
               <div>
                 <label className="block text-sm font-medium text-card-foreground mb-2">
-                  Escalate To *
+                  Escalate To
                 </label>
                 <select
                   value={formData.escalatedTo || ''}
