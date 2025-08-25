@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Company, User } from '../types';
 import { CompanyCard } from './CompanyCard';
 import { AddCompanyModal } from './AddCompanyModal';
-import { Plus, LogOut, Building2, Users as UsersIcon, AlertCircle } from 'lucide-react'; // Renamed Users to UsersIcon to avoid conflict with 'users' state
-import { companyApi, userApi, authApi } from '../api'; // Import your API services
+import { Plus, LogOut, Building2, Users as UsersIcon, AlertCircle } from 'lucide-react';
+import { companyApi, userApi, authApi } from '../api';
 
 interface DashboardProps {
   currentUser: User;
@@ -17,11 +17,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [showAddModal, setShowAddModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'mine' | 'pending' | 'closed'>('all');
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [users, setUsers] = useState<User[]>([]); // State to hold all users
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Function to fetch companies from the backend
+  // New: search + viewAll state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [viewAll, setViewAll] = useState(false);
+
+  // Fetch companies
   const fetchCompanies = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -33,7 +37,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         fetchedCompanies = await companyApi.getAllCompanies({ status: 'PENDING' });
       } else if (filter === 'closed') {
         fetchedCompanies = await companyApi.getAllCompanies({ status: 'CLOSED' });
-      } else { // 'all'
+      } else {
         fetchedCompanies = await companyApi.getAllCompanies();
       }
       setCompanies(fetchedCompanies);
@@ -45,7 +49,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   }, [filter, currentUser.id]);
 
-  // Function to fetch all users from the backend
+  // Fetch users
   const fetchUsers = useCallback(async () => {
     try {
       const fetchedUsers = await userApi.getAllUsers();
@@ -56,31 +60,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   }, []);
 
-  // Initial data fetch on component mount
   useEffect(() => {
-    fetchUsers(); // Fetch users once on mount
+    fetchUsers();
   }, [fetchUsers]);
 
-  // Fetch companies when filter changes or on initial mount
   useEffect(() => {
     fetchCompanies();
   }, [fetchCompanies]);
-
 
   const handleAddCompany = async (newCompanyData: Omit<Company, 'id' | 'createdAt'>) => {
     setError(null);
     try {
       await companyApi.addCompany(newCompanyData);
-      setShowAddModal(false); // Close modal on success
-      fetchCompanies(); // Re-fetch companies to update the list
+      setShowAddModal(false);
+      fetchCompanies();
     } catch (err: any) {
       console.error('Failed to add company:', err);
       if (err.response && err.response.status === 409) {
         setError('A company with this name already exists.');
       } else if (err.response && err.response.status === 404) {
         setError('Assigned user or escalated user not found.');
-      }
-      else {
+      } else {
         setError('Failed to add company. Please try again.');
       }
     }
@@ -90,16 +90,40 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setError(null);
     try {
       await companyApi.updateCompany(id, updates);
-      fetchCompanies(); // Re-fetch companies to update the list
+      fetchCompanies();
     } catch (err) {
       console.error('Failed to update company:', err);
       setError('Failed to update company. Please try again.');
     }
   };
 
+  // NEW: handle comments
+  const handleAddComment = async (companyId: number, content: string) => {
+    setCompanies(prev =>
+      prev.map(c =>
+        c.id === companyId
+          ? {
+              ...c,
+              comments: [
+                ...(c.comments || []),
+                {
+                  id: Date.now(),
+                  companyId,
+                  userId: currentUser.id,
+                  content,
+                  createdAt: new Date().toISOString(),
+                },
+              ],
+            }
+          : c
+      )
+    );
+    // TODO: call API if backend supports persisting comments
+  };
+
   const handleLogout = () => {
-    authApi.logout(); // Clear token
-    onLogout(); // Navigate to login page
+    authApi.logout();
+    onLogout();
   };
 
   const stats = {
@@ -108,6 +132,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
     pending: companies.filter(c => c.status === 'PENDING').length,
     closed: companies.filter(c => c.status === 'CLOSED').length,
   };
+
+  // 🔎 Apply search + viewAll
+  const filteredCompanies = companies.filter((c) =>
+    c.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  const visibleCompanies = viewAll ? filteredCompanies : filteredCompanies.slice(0, 6);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -122,7 +152,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div className="flex items-center space-x-4">
               <div className="text-sm">
                 <span className="text-gray-300">Welcome, </span>
-                <span className="font-medium">{currentUser.firstname} {currentUser.surname}</span> {/* Use firstname/surname */}
+                <span className="font-medium">{currentUser.firstname} {currentUser.surname}</span>
               </div>
               <button
                 onClick={handleLogout}
@@ -160,48 +190,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Controls */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                filter === 'all'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              All Companies
-            </button>
-            <button
-              onClick={() => setFilter('mine')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                filter === 'mine'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              My Companies
-            </button>
-            <button
-              onClick={() => setFilter('pending')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                filter === 'pending'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Pending
-            </button>
-            <button
-              onClick={() => setFilter('closed')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                filter === 'closed'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Closed
-            </button>
+            {(['all', 'mine', 'pending', 'closed'] as const).map(key => (
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  filter === key
+                    ? 'bg-red-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                {key.charAt(0).toUpperCase() + key.slice(1)}
+              </button>
+            ))}
           </div>
-          
+
           <button
             onClick={() => setShowAddModal(true)}
             className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
@@ -209,6 +212,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <Plus className="w-5 h-5" />
             <span>Add Company</span>
           </button>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-6">
+          <input
+            type="text"
+            placeholder="Search companies..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full p-3 border rounded-lg"
+          />
         </div>
 
         {error && (
@@ -222,37 +236,54 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div className="text-center py-12 text-gray-600">Loading companies...</div>
         )}
 
-        {!loading && companies.length === 0 && ( // Changed filteredCompanies to companies for initial check
+        {!loading && filteredCompanies.length === 0 && (
           <div className="text-center py-12">
             <UsersIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No companies found</h3>
             <p className="text-gray-600">
-              {filter === 'all' ? 'Start by adding your first company.' : 'No companies match the selected filter.'}
+              {filter === 'all'
+                ? 'Start by adding your first company.'
+                : 'No companies match the selected filter.'}
             </p>
           </div>
         )}
 
-        {!loading && companies.length > 0 && ( // Changed filteredCompanies to companies
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {companies.map(company => (
-              <CompanyCard
-                key={company.id}
-                company={company}
-                users={users} // Pass fetched users
-                currentUser={currentUser}
-                onUpdate={handleUpdateCompany}
-              />
-            ))}
-          </div>
+        {!loading && visibleCompanies.length > 0 && (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {visibleCompanies.map(company => (
+                <CompanyCard
+                  key={company.id}
+                  company={company}
+                  users={users}
+                  currentUser={currentUser}
+                  onUpdate={handleUpdateCompany}
+                  onAddComment={handleAddComment}
+                />
+              ))}
+            </div>
+
+            {/* Toggle View All / Hide */}
+            {filteredCompanies.length > 6 && (
+              <div className="flex justify-center mt-6">
+                <button
+                  onClick={() => setViewAll(!viewAll)}
+                  className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                >
+                  {viewAll ? "Hide Companies" : "See All Companies"}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
       {/* Add Company Modal */}
       {showAddModal && (
         <AddCompanyModal
-          users={users} // Pass fetched users
+          users={users}
           currentUser={currentUser}
-          assignedCompanies={companies} // Still pass for client-side check before API call
+          assignedCompanies={companies}
           onClose={() => setShowAddModal(false)}
           onSubmit={handleAddCompany}
         />

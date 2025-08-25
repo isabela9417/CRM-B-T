@@ -1,13 +1,16 @@
-// src/components/CompanyCard.tsx
+// CompanyCard.tsx
 import React, { useState } from 'react';
 import { Company, User } from '../types';
-import { Building2, Calendar, Phone, Mail, MapPin, User as UserIcon, Edit2, Check, X } from 'lucide-react';
+import { Building2, Calendar, Phone, Mail, MapPin, User as UserIcon, Edit2, MessageCircle } from 'lucide-react';
+import { CompanyDetailsModal } from './CompanyDetailsModal';
+import { CommentsModal } from './CommentsModal';
 
 interface CompanyCardProps {
   company: Company;
   users: User[];
   currentUser: User;
-  onUpdate: (id: number, updates: Partial<Company>) => void; // Changed id to number
+  onUpdate: (id: number, updates: Partial<Company>) => void;
+  onAddComment?: (companyId: number, content: string) => void;
 }
 
 export const CompanyCard: React.FC<CompanyCardProps> = ({
@@ -15,199 +18,109 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
   users,
   currentUser,
   onUpdate,
+  onAddComment,
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({
-    status: company.status.toUpperCase() as Company['status'], 
-    escalatedTo: company.escalatedTo || (null as number | null), 
-    meetingDate: company.meetingDate,
-    notes: company.notes || '',
-  });
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showCommentsModal, setShowCommentsModal] = useState(false);
 
-  // Ensure assignedTo and escalatedTo are numbers for comparison
-  const assignedUser = users.find(u => u.id === company.assignedTo);
-  const escalatedUser = users.find(u => u.id === company.escalatedTo); // Added for display
-  const canEdit =
-  company.assignedTo === currentUser.id || company.escalatedTo === currentUser.id;
-
-
-  const handleSave = () => {
-    // Ensure escalatedTo is null if not escalated
-    const updatesToSend: Partial<Company> = {
-      ...editForm,
-      escalatedTo: editForm.status !== 'ESCALATED' ? null : editForm.escalatedTo,
-    };
-    onUpdate(company.id, updatesToSend); // company.id is already a number
-    setIsEditing(false);
-  };
-
-  const handleCancel = () => {
-    setEditForm({
-      status: company.status,
-      escalatedTo: company.escalatedTo || null, // Reset to original or null
-      meetingDate: company.meetingDate,
-      notes: company.notes || '',
-    });
-    setIsEditing(false);
-  };
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'CLOSED':
-      return 'bg-green-100 text-green-800';
-    case 'PENDING':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'ESCALATED':
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
-
+  const canEdit = company.assignedTo === currentUser.id;
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+    <div className="bg-card rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow border">
       <div className="p-6">
+        {/* Header */}
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center space-x-3">
-            <div className="bg-red-600 p-2 rounded-lg">
-              <Building2 className="w-5 h-5 text-white" />
+            <div className="bg-crm-primary p-2 rounded-lg">
+              <Building2 className="w-5 h-5 text-crm-primary-foreground" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-black">{company.name}</h3>
-              <p className="text-sm text-gray-600">{company.contactDetails.contactPerson}</p>
+              <h3 className="text-lg font-semibold text-card-foreground">{company.name}</h3>
+              <p className="text-sm text-muted-foreground">{company.contactDetails.contactPerson}</p>
             </div>
           </div>
-          
-          {canEdit && (
+
+          {/* Actions */}
+          <div className="flex space-x-2">
+            {/* 💬 Comments */}
             <button
-              onClick={() => setIsEditing(!isEditing)}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              onClick={() => setShowCommentsModal(true)}
+              className="p-2 text-muted-foreground hover:text-primary transition-colors"
+              title="View Comments"
             >
-              <Edit2 className="w-4 h-4" />
+              <MessageCircle className="w-4 h-4" />
             </button>
-          )}
+
+            {/* ✏️ Edit (next to comment icon) */}
+            {canEdit && (
+              <button
+                onClick={() => setShowDetailsModal(true)}
+                className="p-2 text-muted-foreground hover:text-card-foreground transition-colors"
+                title="Edit Company"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
 
+        {/* Basic Details */}
         <div className="space-y-3 mb-4">
           <div className="flex items-center space-x-3 text-sm">
-            <UserIcon className="w-4 h-4 text-gray-400" />
-            <span className="text-gray-600">Assigned to: <span className="font-medium text-black">{assignedUser?.name}</span></span>
-          </div>
-          
-          <div className="flex items-center space-x-3 text-sm">
-            <Calendar className="w-4 h-4 text-gray-400" />
-            <span className="text-gray-600">
-              Meeting: <span className="font-medium text-black">{new Date(company.meetingDate).toLocaleDateString()}</span>
+            <UserIcon className="w-4 h-4 text-muted-foreground" />
+            <span className="text-muted-foreground">
+              Added by: <span className="font-medium text-card-foreground">
+                {users.find(u => u.id === company.assignedTo)?.name}
+              </span>
             </span>
           </div>
-          
+
           <div className="flex items-center space-x-3 text-sm">
-            <Phone className="w-4 h-4 text-gray-400" />
-            <span className="text-gray-600">{company.contactDetails.phone}</span>
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <span className="text-muted-foreground">
+              Meeting:{" "}
+              <span className="font-medium text-card-foreground">
+                {company.meetingDate ? new Date(company.meetingDate).toLocaleDateString() : "Not set"}
+              </span>
+            </span>
           </div>
-          
+
           <div className="flex items-center space-x-3 text-sm">
-            <Mail className="w-4 h-4 text-gray-400" />
-            <span className="text-gray-600">{company.contactDetails.email}</span>
+            <Phone className="w-4 h-4 text-muted-foreground" />
+            <span className="text-muted-foreground">{company.contactDetails.phone}</span>
           </div>
-          
+
           <div className="flex items-center space-x-3 text-sm">
-            <MapPin className="w-4 h-4 text-gray-400" />
-            <span className="text-gray-600">{company.contactDetails.address}</span>
+            <Mail className="w-4 h-4 text-muted-foreground" />
+            <span className="text-muted-foreground">{company.contactDetails.email}</span>
+          </div>
+
+          <div className="flex items-center space-x-3 text-sm">
+            <MapPin className="w-4 h-4 text-muted-foreground" />
+            <span className="text-muted-foreground">{company.contactDetails.address}</span>
           </div>
         </div>
-
-        {isEditing && canEdit ? (
-          <div className="space-y-4 border-t pt-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select
-                value={editForm.status}
-                onChange={(e) => {
-                  const newStatus = e.target.value as Company['status'];
-                  setEditForm({
-                    ...editForm,
-                    status: newStatus,
-                    escalatedTo: newStatus !== 'ESCALATED' ? null : editForm.escalatedTo // Reset if not escalated
-                  });
-                }}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm"
-              >
-                <option value="PENDING">Pending</option>
-                <option value="CLOSED">Closed</option>
-                <option value="ESCALATED">Escalated</option>
-              </select>
-            </div>
-
-            {editForm.status === 'ESCALATED' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Escalate to</label>
-                <select
-                  value={editForm.escalatedTo || ''} // Handle null for select value
-                  onChange={(e) => setEditForm({ ...editForm, escalatedTo: Number(e.target.value) || null })} // Convert to Number, allow null
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm"
-                >
-                  <option value="">Select user...</option>
-                  {users.filter(u => u.id !== currentUser.id).map(user => (
-                    <option key={user.id} value={user.id}>{user.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Meeting Date</label>
-              <input
-                type="date"
-                value={editForm.meetingDate}
-                onChange={(e) => setEditForm({ ...editForm, meetingDate: e.target.value })}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-              <textarea
-                value={editForm.notes}
-                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                placeholder="Add notes about the company or meeting..."
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm"
-                rows={3}
-              />
-            </div>
-
-            <div className="flex space-x-2">
-              <button
-                onClick={handleSave}
-                className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2 text-sm"
-              >
-                <Check className="w-4 h-4" />
-                <span>Save</span>
-              </button>
-              <button
-                onClick={handleCancel}
-                className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors flex items-center justify-center space-x-2 text-sm"
-              >
-                <X className="w-4 h-4" />
-                <span>Cancel</span>
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between border-t pt-4">
-            <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(company.status)}`}>
-              {company.status.charAt(0).toUpperCase() + company.status.slice(1)}
-            </span>
-            
-            {company.escalatedTo && (
-              <span className="text-xs text-gray-600">
-                Escalated to: {escalatedUser?.name}
-              </span>
-            )}
-          </div>
-        )}
       </div>
+
+      {/* Modals */}
+      {showDetailsModal && (
+        <CompanyDetailsModal
+          company={company}
+          onClose={() => setShowDetailsModal(false)}
+          onUpdate={onUpdate}
+          canEdit={canEdit}
+        />
+      )}
+
+      {showCommentsModal && (
+        <CommentsModal
+          company={company}
+          users={users}
+          currentUser={currentUser}
+          onClose={() => setShowCommentsModal(false)}
+          onAddComment={onAddComment}
+        />
+      )}
     </div>
   );
 };
