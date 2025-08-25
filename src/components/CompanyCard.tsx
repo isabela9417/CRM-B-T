@@ -1,7 +1,16 @@
-// CompanyCard.tsx
 import React, { useState } from 'react';
 import { Company, User } from '../types';
-import { Building2, Calendar, Phone, Mail, MapPin, User as UserIcon, Edit2, MessageCircle } from 'lucide-react';
+import {
+  Building2,
+  Calendar,
+  Phone,
+  Mail,
+  MapPin,
+  User as UserIcon,
+  Edit2,
+  MessageCircle,
+  Trash2
+} from 'lucide-react';
 import { CompanyDetailsModal } from './CompanyDetailsModal';
 import { CommentsModal } from './CommentsModal';
 
@@ -10,6 +19,7 @@ interface CompanyCardProps {
   users: User[];
   currentUser: User;
   onUpdate: (id: number, updates: Partial<Company>) => void;
+  onDelete: (id: number) => void; // ✅ Add onDelete prop
   onAddComment?: (companyId: number, content: string) => void;
 }
 
@@ -18,6 +28,7 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
   users,
   currentUser,
   onUpdate,
+  onDelete,
   onAddComment,
 }) => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -31,8 +42,8 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
         {/* Header */}
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center space-x-3">
-            <div className="bg-crm-primary p-2 rounded-lg">
-              <Building2 className="w-5 h-5 text-crm-primary-foreground" />
+            <div className="bg-red-600 p-2 rounded-lg">
+              <Building2 className="w-5 h-5 text-white" />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-card-foreground">{company.name}</h3>
@@ -42,20 +53,20 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
 
           {/* Actions */}
           <div className="flex space-x-2">
-            {/* 💬 Comments */}
+            {/* Comments */}
             <button
               onClick={() => setShowCommentsModal(true)}
-              className="p-2 text-muted-foreground hover:text-primary transition-colors"
+              className="p-2 text-red-600 hover:text-red-800 transition-colors"
               title="View Comments"
             >
               <MessageCircle className="w-4 h-4" />
             </button>
 
-            {/* ✏️ Edit (next to comment icon) */}
+            {/* Edit */}
             {canEdit && (
               <button
                 onClick={() => setShowDetailsModal(true)}
-                className="p-2 text-muted-foreground hover:text-card-foreground transition-colors"
+                className="p-2 text-red-600 hover:text-red-800 transition-colors"
                 title="Edit Company"
               >
                 <Edit2 className="w-4 h-4" />
@@ -100,6 +111,20 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
             <span className="text-muted-foreground">{company.contactDetails.address}</span>
           </div>
         </div>
+
+        {/* Delete Button at Bottom */}
+        {canEdit && (
+          <div className="flex justify-end">
+            <button
+              onClick={() => onDelete(company.id)}
+              className="flex items-center space-x-2 text-red-600 hover:text-red-800 transition-colors"
+              title="Delete Company"
+            >
+              <Trash2 className="w-5 h-5" />
+              <span className="text-sm font-medium">Delete</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Modals */}
