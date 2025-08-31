@@ -97,6 +97,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
+  // Delete handler
+const handleDeleteCompany = async (companyId: number) => {
+  try {
+    await companyApi.deleteCompany(companyId);
+
+    // Remove deleted company from state
+    setCompanies(prev => prev.filter(c => c.id !== companyId));
+    
+    alert("Company deleted successfully.");
+  } catch (error) {
+    console.error("Delete failed:", error);
+    alert("Failed to delete company. Check console for details.");
+  }
+}
+
   // NEW: handle comments
   const handleAddComment = async (companyId: number, content: string) => {
     setCompanies(prev =>
@@ -259,6 +274,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   currentUser={currentUser}
                   onUpdate={handleUpdateCompany}
                   onAddComment={handleAddComment}
+                  onDelete={handleDeleteCompany}
                 />
               ))}
             </div>

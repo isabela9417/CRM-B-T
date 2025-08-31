@@ -41,15 +41,18 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
       <div className="p-6">
         {/* Header */}
         <div className="flex justify-between items-start mb-4">
-          <div className="flex items-center space-x-3">
-            <div className="bg-red-600 p-2 rounded-lg">
-              <Building2 className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-card-foreground">{company.name}</h3>
-              <p className="text-sm text-muted-foreground">{company.contactDetails.contactPerson}</p>
-            </div>
-          </div>
+        <div className="flex items-center space-x-3">
+        <div className="bg-red-600 p-2 rounded-lg">
+          <Building2 className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-card-foreground">{company.name}</h3>
+          <p className="text-sm text-muted-foreground">
+            {company.contactDetails?.contactPerson || "N/A"}
+          </p>
+        </div>
+      </div>
+
 
           {/* Actions */}
           <div className="flex space-x-2">
@@ -98,33 +101,47 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
 
           <div className="flex items-center space-x-3 text-sm">
             <Phone className="w-4 h-4 text-muted-foreground" />
-            <span className="text-muted-foreground">{company.contactDetails.phone}</span>
+            <span className="text-muted-foreground">{company.contactDetails?.phone || "N/A"}</span>
           </div>
 
           <div className="flex items-center space-x-3 text-sm">
             <Mail className="w-4 h-4 text-muted-foreground" />
-            <span className="text-muted-foreground">{company.contactDetails.email}</span>
+            <span className="text-muted-foreground">{company.contactDetails?.email || "N/A"}</span>
           </div>
 
           <div className="flex items-center space-x-3 text-sm">
             <MapPin className="w-4 h-4 text-muted-foreground" />
-            <span className="text-muted-foreground">{company.contactDetails.address}</span>
+            <span className="text-muted-foreground">{company.contactDetails?.address || "N/A"}</span>
           </div>
         </div>
 
         {/* Delete Button at Bottom */}
-        {canEdit && (
-          <div className="flex justify-end">
-            <button
-              onClick={() => onDelete(company.id)}
-              className="flex items-center space-x-2 text-red-600 hover:text-red-800 transition-colors"
-              title="Delete Company"
-            >
-              <Trash2 className="w-5 h-5" />
-              <span className="text-sm font-medium">Delete</span>
-            </button>
-          </div>
-        )}
+      {canEdit && company.id != null && (
+        <div className="flex justify-end mt-4">
+          <button
+            onClick={async () => {
+              const confirmed = window.confirm(
+                `Are you sure you want to delete "${company.name}"?`
+              );
+              if (!confirmed) return;
+
+              try {
+                // Call the parent handler which will call the API and update state
+                await onDelete(company.id);
+              } catch (error) {
+                console.error("Failed to delete company:", error);
+                alert("Failed to delete company. Please try again.");
+              }
+            }}
+            className="flex items-center space-x-2 text-red-600 hover:text-red-800 transition-colors"
+            title="Delete Company"
+          >
+            <Trash2 className="w-5 h-5" />
+            <span className="text-sm font-medium">Delete</span>
+          </button>
+        </div>
+      )}
+
       </div>
 
       {/* Modals */}

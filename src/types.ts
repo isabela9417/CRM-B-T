@@ -28,3 +28,11 @@ export interface Company {
   notes?: string;
   createdAt: string;
 }
+
+export interface Comment {
+  id: number;
+  companyId: number;
+  userId: number;
+  content: string;
+  createdAt: string;
+}

@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
-import { Company, User, Comment } from '../types';
+import React, { useState, useEffect } from 'react';
+// This import path must be correct and consistent across all files
+import { Company, User, Comment } from '../types'; 
 import { X, MessageCircle, Send, Edit2, Trash2, Check, X as XIcon, Heart } from 'lucide-react';
+import { commentsApi } from '../api';
 
 interface CommentsModalProps {
   company: Company;
   users: User[];
   currentUser: User;
   onClose: () => void;
-  onAddComment?: (companyId: number, content: string) => void;
-  onEditCompany?: (companyId: number) => void; // <-- new prop for editing company
+  onEditCompany?: (companyId: number) => void;
 }
 
 export const CommentsModal: React.FC<CommentsModalProps> = ({
@@ -16,225 +17,137 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
   users,
   currentUser,
   onClose,
-  onAddComment,
   onEditCompany,
 }) => {
   const [newComment, setNewComment] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingContent, setEditingContent] = useState('');
+  const [comments, setComments] = useState<Comment[]>([]); 
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [comments, setComments] = useState<Comment[]>(company.comments || [
-    {
-      id: 1,
-      companyId: company.id,
-      userId: 1,
-      content: "Initial contact made. Company seems very interested in our enterprise solutions.",
-      createdAt: "2024-01-15T10:30:00Z",
-    },
-    {
-      id: 2,
-      companyId: company.id,
-      userId: 2,
-      content: "Follow-up meeting scheduled for next week. Very promising lead!",
-      createdAt: "2024-01-16T14:20:00Z",
-    },
-  ]);
-
-  const handleAddComment = () => {
-    if (!newComment.trim()) return;
-
-    const comment: Comment = {
-      id: Date.now(),
-      companyId: company.id,
-      userId: currentUser.id,
-      content: newComment.trim(),
-      createdAt: new Date().toISOString(),
-    };
-
-    setComments([...comments, comment]);
-    setNewComment('');
-
-    if (onAddComment) {
-      onAddComment(company.id, newComment.trim());
+  const fetchComments = async () => {
+    try {
+      const fetchedComments = await commentsApi.getCommentsByCompany(company.id);
+      setComments(fetchedComments);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleEditComment = (commentId: number, newContent: string) => {
-    setComments(comments.map(comment =>
-      comment.id === commentId
-        ? { ...comment, content: newContent, updatedAt: new Date().toISOString() }
-        : comment
-    ));
-    setEditingCommentId(null);
-    setEditingContent('');
+  useEffect(() => {
+    fetchComments();
+  }, [company.id]);
+
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return;
+    try {
+      const addedComment = await commentsApi.addComment(company.id, currentUser.id, newComment);
+      setComments([...comments, addedComment]);
+      setNewComment('');
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    }
   };
 
-  const handleDeleteComment = (commentId: number) => {
-    setComments(comments.filter(comment => comment.id !== commentId));
-  };
-
-  const startEditing = (comment: Comment) => {
-    setEditingCommentId(comment.id);
-    setEditingContent(comment.content);
-  };
-
-  const cancelEditing = () => {
-    setEditingCommentId(null);
-    setEditingContent('');
-  };
-
-  const getUserName = (userId: number) => {
-    const user = users.find(u => u.id === userId);
-    return user?.name || `${user?.firstname} ${user?.surname}` || 'Unknown User';
+  const getUserById = (userId: number) => {
+    return users.find((u) => u.id === userId);
   };
 
   const getUserInitials = (userId: number) => {
-    const user = users.find(u => u.id === userId);
-    if (!user) return 'U';
-    return (user.firstname?.charAt(0) || user.name?.charAt(0) || 'U').toUpperCase();
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-
-    if (diffInHours < 1) {
-      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-      return diffInMinutes < 1 ? 'Just now' : `${diffInMinutes}m`;
-    } else if (diffInHours < 24) {
-      return `${diffInHours}h`;
-    } else {
-      const diffInDays = Math.floor(diffInHours / 24);
-      return diffInDays < 7 ? `${diffInDays}d` : date.toLocaleDateString();
+    const user = getUserById(userId);
+    if (user) {
+      return `${user.firstname.charAt(0)}${user.surname.charAt(0)}`;
     }
+    return '??';
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col border border-gray-200">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50 animate-fade-in">
+      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col shadow-xl">
+        <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="bg-red-600 p-2 rounded-lg flex items-center space-x-2">
-              <MessageCircle className="w-5 h-5 text-white" />
-              {onEditCompany && (
-                <button
-                  onClick={() => onEditCompany(company.id)}
-                  className="p-1 bg-white text-red-600 rounded hover:bg-gray-100 transition-colors"
-                  title="Edit Company Details"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Comments</h2>
-              <p className="text-sm text-gray-500">{company.name}</p>
-            </div>
+            <MessageCircle className="w-6 h-6 text-red-600" />
+            <h3 className="text-xl font-semibold text-gray-900">
+              Comments for {company.name}
+            </h3>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-500 hover:text-gray-900 transition-colors"
-          >
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+            <X className="w-6 h-6 text-gray-500" />
           </button>
         </div>
 
-        {/* Comments List */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="space-y-4">
-            {comments.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                <p>No comments yet. Be the first to add one!</p>
-              </div>
-            ) : (
-              comments.map((comment) => (
-                <div
-                  key={comment.id}
-                  className="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex items-start space-x-3">
-                    <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-sm font-medium">
-                        {getUserInitials(comment.userId)}
+        <div className="flex-1 p-6 overflow-y-auto">
+          {isLoading ? (
+            <div className="text-center text-gray-500">Loading comments...</div>
+          ) : (
+            comments.map((comment) => (
+              <div key={comment.id} className="relative group mb-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-start space-x-4">
+                  <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-lg font-medium">
+                      {getUserInitials(comment.userId)}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <h4 className="font-semibold text-gray-900">
+                        {getUserById(comment.userId)?.firstname}
+                      </h4>
+                      <span className="text-xs text-gray-500">
+                        {new Date(comment.createdAt).toLocaleDateString()}
                       </span>
                     </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <h4 className="font-semibold text-gray-900 text-sm">
-                            {getUserName(comment.userId)}
-                          </h4>
-                          <span className="text-gray-500 text-xs">
-                            {formatDate(comment.createdAt)}
-                            {comment.updatedAt && ' • edited'}
-                          </span>
+                    {editingCommentId === comment.id ? (
+                      <div className="mt-2">
+                        <textarea
+                          value={editingContent}
+                          onChange={(e) => setEditingContent(e.target.value)}
+                          className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                          rows={2}
+                        />
+                        <div className="flex space-x-2 mt-2">
+                          <button
+                            className="px-3 py-1 bg-green-500 text-white text-sm rounded-lg"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button
+                            className="px-3 py-1 bg-gray-300 text-gray-700 text-sm rounded-lg"
+                          >
+                            <XIcon className="w-4 h-4" />
+                          </button>
                         </div>
-
-                        {comment.userId === currentUser.id && (
-                          <div className="flex space-x-1">
-                            <button
-                              onClick={() => startEditing(comment)}
-                              className="p-1 text-gray-500 hover:text-red-600 transition-colors"
-                              title="Edit comment"
-                            >
-                              <Edit2 className="w-3 h-3" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteComment(comment.id)}
-                              className="p-1 text-gray-500 hover:text-red-600 transition-colors"
-                              title="Delete comment"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        )}
                       </div>
-
-                      {editingCommentId === comment.id ? (
-                        <div className="space-y-3">
-                          <textarea
-                            value={editingContent}
-                            onChange={(e) => setEditingContent(e.target.value)}
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm bg-white text-gray-900 resize-none"
-                            rows={3}
-                          />
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => handleEditComment(comment.id, editingContent)}
-                              className="px-3 py-1.5 bg-red-600 text-white rounded-md text-sm hover:bg-red-700 transition-colors flex items-center space-x-1"
-                            >
-                              <Check className="w-3 h-3" />
-                              <span>Save</span>
-                            </button>
-                            <button
-                              onClick={cancelEditing}
-                              className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-md text-sm hover:bg-gray-300 transition-colors flex items-center space-x-1"
-                            >
-                              <XIcon className="w-3 h-3" />
-                              <span>Cancel</span>
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap mb-3">
-                          {comment.content}
-                        </p>
-                      )}
-                    </div>
+                    ) : (
+                      <p className="mt-2 text-gray-800 whitespace-pre-line">{comment.content}</p>
+                    )}
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+                {currentUser.id === comment.userId && (
+                  <div className="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      className="p-1 rounded-full text-gray-400 hover:text-blue-500"
+                      title="Edit Comment"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      className="p-1 rounded-full text-gray-400 hover:text-red-500"
+                      title="Delete Comment"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
 
-        {/* Add Comment */}
-        <div className="border-t border-gray-200 p-6">
-          <div className="flex space-x-3">
+        <div className="p-6 border-t border-gray-200">
+          <div className="flex items-start space-x-4">
             <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-white text-sm font-medium">
                 {getUserInitials(currentUser.id)}
