@@ -4,7 +4,8 @@ import { User, Company } from '../types'; // Adjust path as needed
 
 // Your Spring Boot backend base URL
 // Make sure this matches where your Spring Boot app is running
-const API_BASE_URL = 'http://localhost:8081/api';
+// const API_BASE_URL = 'http://localhost:8081/api';
+const API_BASE_URL = 'https://b-t-backend.onrender.com/api';
 
 // --- Authentication API ---
 interface LoginRequestPayload {
