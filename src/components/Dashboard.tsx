@@ -71,9 +71,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const handleAddCompany = async (newCompanyData: Omit<Company, 'id' | 'createdAt'>) => {
     setError(null);
     try {
-      await companyApi.addCompany(newCompanyData);
+      const added = await companyApi.addCompany(newCompanyData);
       setShowAddModal(false);
       fetchCompanies();
+
+      // 🔔 Show immediate reminder if contactDate is set
+      if (newCompanyData.contactDate) {
+        alert(`Reminder set: Contact ${newCompanyData.name} on ${newCompanyData.contactDate}`);
+      }
     } catch (err: any) {
       console.error('Failed to add company:', err);
       if (err.response && err.response.status === 409) {
@@ -139,6 +144,33 @@ export const Dashboard: React.FC<DashboardProps> = ({
   );
   const visibleCompanies = viewAll ? filteredCompanies : filteredCompanies.slice(0, 6);
 
+  // 📌 Build notifications for current user
+  const notifications = companies
+    .filter(c => c.assignedTo === currentUser.id)
+    .flatMap(c => {
+      const notes: string[] = [];
+
+      // Meeting/contact date reminder
+      if (c.contactDate) {
+        const contactDate = new Date(c.contactDate);
+        const now = new Date();
+        const diffDays = Math.ceil((contactDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) {
+          notes.push(`Meeting with ${c.name} is today.`);
+        } else if (diffDays > 0 && diffDays <= 3) {
+          notes.push(`Meeting with ${c.name} in ${diffDays} days.`);
+        }
+      }
+
+      // Pending deal reminder
+      if (c.status === "PENDING") {
+        notes.push(`Company ${c.name} is still pending.`);
+      }
+
+      return notes;
+    });
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -166,8 +198,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </header>
 
-      {/* Stats */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* 🔔 Notifications */}
+        {notifications.length > 0 && (
+          <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <h2 className="font-bold text-yellow-800 mb-2">Reminders</h2>
+            <ul className="space-y-1 text-yellow-700 text-sm">
+              {notifications.map((note, idx) => (
+                <li key={idx} className="flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{note}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white p-6 rounded-lg shadow-md">
             <div className="text-2xl font-bold text-black">{stats.total}</div>
