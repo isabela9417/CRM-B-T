@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Company, User } from '../types';
 import { CompanyCard } from './CompanyCard';
 import { AddCompanyModal } from './AddCompanyModal';
-import { Plus, LogOut, Building2, Users as UsersIcon, AlertCircle } from 'lucide-react';
+import { Plus, LogOut, Building2, Users as UsersIcon, AlertCircle, X } from 'lucide-react';
 import { companyApi, userApi, authApi } from '../api';
 
 interface DashboardProps {
@@ -21,9 +21,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // New: search + viewAll state
   const [searchTerm, setSearchTerm] = useState("");
   const [viewAll, setViewAll] = useState(false);
+
+  // 🔔 New state for closing notifications
+  const [showNotifications, setShowNotifications] = useState(true);
 
   // Fetch companies
   const fetchCompanies = useCallback(async () => {
@@ -71,11 +73,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const handleAddCompany = async (newCompanyData: Omit<Company, 'id' | 'createdAt'>) => {
     setError(null);
     try {
-      const added = await companyApi.addCompany(newCompanyData);
+      await companyApi.addCompany(newCompanyData);
       setShowAddModal(false);
       fetchCompanies();
 
-      // 🔔 Show immediate reminder if contactDate is set
       if (newCompanyData.contactDate) {
         alert(`Reminder set: Contact ${newCompanyData.name} on ${newCompanyData.contactDate}`);
       }
@@ -102,7 +103,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
-  // NEW: handle comments
   const handleAddComment = async (companyId: number, content: string) => {
     setCompanies(prev =>
       prev.map(c =>
@@ -123,7 +123,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
           : c
       )
     );
-    // TODO: call API if backend supports persisting comments
   };
 
   const handleLogout = () => {
@@ -138,19 +137,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
     closed: companies.filter(c => c.status === 'CLOSED').length,
   };
 
-  // 🔎 Apply search + viewAll
   const filteredCompanies = companies.filter((c) =>
     c.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
   const visibleCompanies = viewAll ? filteredCompanies : filteredCompanies.slice(0, 6);
 
-  // 📌 Build notifications for current user
+  // 📌 Notifications logic
   const notifications = companies
     .filter(c => c.assignedTo === currentUser.id)
     .flatMap(c => {
       const notes: string[] = [];
 
-      // Meeting/contact date reminder
       if (c.contactDate) {
         const contactDate = new Date(c.contactDate);
         const now = new Date();
@@ -158,14 +155,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         if (diffDays === 0) {
           notes.push(`Meeting with ${c.name} is today.`);
-        } else if (diffDays > 0 && diffDays <= 3) {
+        } else if (diffDays > 0 && diffDays <= 5) {
           notes.push(`Meeting with ${c.name} in ${diffDays} days.`);
         }
       }
 
-      // Pending deal reminder
       if (c.status === "PENDING") {
-        notes.push(`Company ${c.name} is still pending.`);
+        if (c.contactDate) {
+          notes.push(`Company ${c.name} is still pending (meeting on ${new Date(c.contactDate).toLocaleDateString()}).`);
+        } else {
+          notes.push(`Company ${c.name} is still pending (no meeting scheduled).`);
+        }
       }
 
       return notes;
@@ -200,8 +200,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* 🔔 Notifications */}
-        {notifications.length > 0 && (
-          <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        {showNotifications && notifications.length > 0 && (
+          <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4 relative">
+            {/* Close button */}
+            <button
+              onClick={() => setShowNotifications(false)}
+              className="absolute top-2 right-2 text-yellow-700 hover:text-yellow-900"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
             <h2 className="font-bold text-yellow-800 mb-2">Reminders</h2>
             <ul className="space-y-1 text-yellow-700 text-sm">
               {notifications.map((note, idx) => (
@@ -310,7 +318,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
               ))}
             </div>
 
-            {/* Toggle View All / Hide */}
             {filteredCompanies.length > 6 && (
               <div className="flex justify-center mt-6">
                 <button
@@ -325,7 +332,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
         )}
       </div>
 
-      {/* Add Company Modal */}
       {showAddModal && (
         <AddCompanyModal
           users={users}

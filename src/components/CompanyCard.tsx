@@ -9,7 +9,8 @@ import {
   User as UserIcon,
   Edit2,
   MessageCircle,
-  Trash2
+  Trash2,
+  Clock
 } from 'lucide-react';
 import { CompanyDetailsModal } from './CompanyDetailsModal';
 import { CommentsModal } from './CommentsModal';
@@ -19,7 +20,7 @@ interface CompanyCardProps {
   users: User[];
   currentUser: User;
   onUpdate: (id: number, updates: Partial<Company>) => void;
-  onDelete: (id: number) => void; // ✅ Add onDelete prop
+  onDelete: (id: number) => void;
   onAddComment?: (companyId: number, content: string) => void;
 }
 
@@ -86,12 +87,27 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
             </span>
           </div>
 
+          {/* Added On Date */}
+          <div className="flex items-center space-x-3 text-sm">
+            <Clock className="w-4 h-4 text-muted-foreground" />
+            <span className="text-muted-foreground">
+              Added on:{" "}
+              <span className="font-medium text-card-foreground">
+                {company.createdAt
+                  ? new Date(company.createdAt).toLocaleDateString()
+                  : "Unknown"}
+              </span>
+            </span>
+          </div>
+
           <div className="flex items-center space-x-3 text-sm">
             <Calendar className="w-4 h-4 text-muted-foreground" />
             <span className="text-muted-foreground">
               Meeting:{" "}
               <span className="font-medium text-card-foreground">
-                {company.meetingDate ? new Date(company.meetingDate).toLocaleDateString() : "Not set"}
+                {company.meetingDate
+                  ? new Date(company.meetingDate).toLocaleDateString()
+                  : "Not set"}
               </span>
             </span>
           </div>

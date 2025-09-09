@@ -232,39 +232,41 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
           </div>
         </div>
 
-        {/* Add Comment */}
-        <div className="border-t border-gray-200 p-6">
-          <div className="flex space-x-3">
-            <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-sm font-medium">
-                {getUserInitials(currentUser.id)}
-              </span>
-            </div>
-            <div className="flex-1">
-              <textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder={`Write a comment about ${company.name}...`}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none bg-white text-gray-900 placeholder-gray-400"
-                rows={3}
-              />
-              <div className="flex justify-between items-center mt-3">
-                <div className="flex items-center space-x-2 text-xs text-gray-500">
-                  <Heart className="w-3 h-3" />
-                  <span>Press Enter to add line break</span>
+        {/* Add Comment (only if current user is the one who added the company) */}
+          {currentUser.id === company.assignedTo && (
+            <div className="border-t border-gray-200 p-6">
+              <div className="flex space-x-3">
+                <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-sm font-medium">
+                    {getUserInitials(currentUser.id)}
+                  </span>
                 </div>
-                <button
-                  onClick={handleAddComment}
-                  disabled={!newComment.trim()}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                >
-                  <Send className="w-4 h-4" />
-                  <span>Comment</span>
-                </button>
+                <div className="flex-1">
+                  <textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder={`Write a comment about ${company.name}...`}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none bg-white text-gray-900 placeholder-gray-400"
+                    rows={3}
+                  />
+                  <div className="flex justify-between items-center mt-3">
+                    <div className="flex items-center space-x-2 text-xs text-gray-500">
+                      <Heart className="w-3 h-3" />
+                      <span>Press Enter to add line break</span>
+                    </div>
+                    <button
+                      onClick={handleAddComment}
+                      disabled={!newComment.trim()}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                    >
+                      <Send className="w-4 h-4" />
+                      <span>Comment</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          )}
       </div>
     </div>
   );
