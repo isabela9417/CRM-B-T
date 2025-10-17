@@ -4,6 +4,7 @@ import { User, Company } from '../types'; // Adjust path as needed
 
 // Your Spring Boot backend base URL
 // Make sure this matches where your Spring Boot app is running
+// const API_BASE_URL = 'http://localhost:8081/api';
 const API_BASE_URL = 'https://b-t-backend.onrender.com/api';
 
 // --- Authentication API ---
@@ -50,6 +51,7 @@ export const authApi = {
       name: `${firstname}`, // Default name for now
     };
   },
+  
   logout: () => {
     localStorage.removeItem('authToken'); // Clear token on logout
     // You might also call a backend /logout endpoint if you have session management
@@ -113,11 +115,34 @@ export const companyApi = {
   },
 
   updateCompany: async (id: number, updates: Partial<Company>): Promise<Company> => {
-    const response = await axios.put<Company>(`${API_BASE_URL}/companies/${id}`, updates);
+    const response = await axios.patch<Company>(`${API_BASE_URL}/companies/${id}`, updates);
     return response.data;
   },
 
+
   deleteCompany: async (id: number): Promise<void> => {
     await axios.delete(`${API_BASE_URL}/companies/${id}`);
+  }
+};
+
+
+export const commentsApi = {
+  getCommentsByCompany: async (companyId: number): Promise<Comment[]> => {
+    const response = await axios.get<Comment[]>(`${API_BASE_URL}/comments/company/${companyId}`);
+    return response.data;
+  },
+  addComment: async (companyId: number, userId: number, content: string): Promise<Comment> => {
+    const response = await axios.post<Comment>(
+      `${API_BASE_URL}/comments`,
+      {},
+      {
+        params: {
+          companyId,
+          userId,
+          content,
+        },
+      }
+    );
+    return response.data;
   },
 };
